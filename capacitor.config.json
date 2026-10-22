@@ -1,0 +1,8 @@
+{
+  "appId": "com.mayasoo.tinnituslab",
+  "appName": "耳鳴工作台",
+  "webDir": "www",
+  "android": {
+    "allowMixedContent": false
+  }
+}

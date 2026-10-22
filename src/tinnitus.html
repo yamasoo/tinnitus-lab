@@ -1,0 +1,765 @@
+<title>耳鳴頻段工作台</title>
+<meta name="claude:viewport-fit-sides" content="cover">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=IBM+Plex+Mono:wght@400;500&family=Noto+Sans+TC:wght@400;500;700&family=Noto+Serif+TC:wght@700&display=swap">
+<style>
+/* Layout: one instrument column; sticky three-step tab rail; audiogram chart and two-ear spectrum are the centerpieces */
+:root{
+  --bg:#EDF2F1; --surface:#FFFFFF; --sunk:#E1E9E8; --ink:#132326; --muted:#53686B; --line:#C8D5D4;
+  --accent:#0D6B66; --accent-ink:#FFFFFF; --tin:#B5670A; --right:#C3352E; --left:#2A57B4;
+  --warn-bg:#FBEFD9; --warn-ink:#5E3A00; --err:#B42318;
+  --f-display:"Noto Serif TC","Songti TC","PMingLiU",serif;
+  --f-body:"Noto Sans TC","PingFang TC","Microsoft JhengHei",system-ui,sans-serif;
+  --f-mono:"IBM Plex Mono",ui-monospace,Menlo,Consolas,monospace;
+}
+@media (prefers-color-scheme: dark){:root:not([data-theme="light"]){
+  --bg:#0D1517; --surface:#152124; --sunk:#1B2A2D; --ink:#E1EBEA; --muted:#93A8A9; --line:#2B3D40;
+  --accent:#4CC0B5; --accent-ink:#06201E; --tin:#F2A83E; --right:#F0706A; --left:#86A8F2;
+  --warn-bg:#382810; --warn-ink:#F6D49A; --err:#F97066; color-scheme:dark}}
+:root[data-theme="dark"]{
+  --bg:#0D1517; --surface:#152124; --sunk:#1B2A2D; --ink:#E1EBEA; --muted:#93A8A9; --line:#2B3D40;
+  --accent:#4CC0B5; --accent-ink:#06201E; --tin:#F2A83E; --right:#F0706A; --left:#86A8F2;
+  --warn-bg:#382810; --warn-ink:#F6D49A; --err:#F97066; color-scheme:dark}
+
+[hidden]{display:none!important}
+body{background:var(--bg);color:var(--ink);font-family:var(--f-body);font-size:15px;line-height:1.65}
+body::before{content:"";position:fixed;inset:0 0 auto;height:env(safe-area-inset-top,0px);z-index:10;background:var(--bg)}
+.wrap{max-width:720px;margin:0 auto;padding-left:max(16px,env(safe-area-inset-left,0px));padding-right:max(16px,env(safe-area-inset-right,0px));padding-block:20px 48px}
+h1{font-family:var(--f-display);font-size:1.75rem;line-height:1.25;margin:0;text-wrap:balance;letter-spacing:.02em}
+h2{font-family:var(--f-display);font-size:1.2rem;margin:0;text-wrap:balance}
+h3{font-size:.95rem;margin:0;font-weight:700}
+p{margin:0}
+.sub{color:var(--muted);margin-top:6px;max-width:60ch}
+.warn{margin-top:16px;background:var(--warn-bg);color:var(--warn-ink);border-radius:8px;padding:12px 14px;font-size:.92rem}
+
+.tabs{position:sticky;top:env(safe-area-inset-top,0px);z-index:5;background:var(--bg);display:grid;grid-template-columns:repeat(3,1fr);gap:4px;padding-block:12px;margin-top:8px;border-bottom:1px solid var(--line)}
+.tab{font:inherit;font-weight:500;border:0;background:transparent;color:var(--muted);padding:8px 4px;border-radius:8px;cursor:pointer;min-height:48px;display:flex;flex-direction:column;align-items:center;line-height:1.25}
+.tab small{font-family:var(--f-mono);font-size:.7rem;letter-spacing:.08em}
+.tab[aria-selected="true"]{background:var(--surface);color:var(--ink);box-shadow:inset 0 -2px 0 var(--accent)}
+:is(.tab,.btn,.seg button,.chip,.linkbtn,input,textarea):focus-visible{outline:2px solid var(--accent);outline-offset:2px}
+
+.panel{display:flex;flex-direction:column;gap:16px;padding-top:18px}
+.card{background:var(--surface);border:1px solid var(--line);border-radius:10px;padding:16px;display:flex;flex-direction:column;gap:14px;min-width:0}
+.how{color:var(--muted);font-size:.9rem}
+.how ol{margin:6px 0 0;padding-left:1.3em;display:flex;flex-direction:column;gap:2px}
+
+.row{display:flex;flex-wrap:wrap;gap:8px;align-items:center}
+.label{font-size:.78rem;color:var(--muted);letter-spacing:.06em}
+.btn{font:inherit;font-weight:500;min-height:44px;padding:8px 14px;border-radius:8px;border:1px solid var(--line);background:var(--surface);color:var(--ink);cursor:pointer}
+.btn.primary{background:var(--accent);border-color:var(--accent);color:var(--accent-ink)}
+.btn.primary.on{background:var(--ink);border-color:var(--ink);color:var(--bg)}
+.btn.ghost{background:transparent}
+.btn.small{min-height:36px;padding:4px 10px;font-size:.88rem}
+.btn.grow{flex:1 1 140px}
+.btn:disabled{opacity:.45;cursor:not-allowed}
+.linkbtn{font:inherit;font-size:.85rem;border:0;background:transparent;color:var(--accent);text-decoration:underline;cursor:pointer;padding:2px 0}
+.seg{display:inline-flex;background:var(--sunk);border-radius:8px;padding:3px;gap:2px;flex-wrap:wrap}
+.seg button{font:inherit;font-size:.9rem;border:0;background:transparent;color:var(--muted);padding:6px 12px;border-radius:6px;min-height:38px;cursor:pointer}
+.seg button[aria-pressed="true"]{background:var(--surface);color:var(--ink);font-weight:500;box-shadow:0 1px 2px rgba(0,0,0,.12)}
+.check{display:inline-flex;gap:8px;align-items:center;font-size:.9rem;min-height:36px;cursor:pointer}
+.check input{width:18px;height:18px;accent-color:var(--accent)}
+
+.readout{display:flex;flex-wrap:wrap;gap:12px 24px;align-items:baseline}
+.big{font-family:var(--f-mono);font-size:2rem;font-weight:500;font-variant-numeric:tabular-nums;line-height:1.1}
+.mid{font-family:var(--f-mono);font-size:1.1rem;font-variant-numeric:tabular-nums}
+.mono{font-family:var(--f-mono);font-variant-numeric:tabular-nums}
+input[type=range]{width:100%;accent-color:var(--accent);height:36px;margin:0}
+input[type=number]{font:inherit;font-family:var(--f-mono);width:7.5em;min-height:44px;padding:6px 10px;border:1px solid var(--line);border-radius:8px;background:var(--bg);color:var(--ink)}
+textarea{font-family:var(--f-mono);font-size:.78rem;width:100%;min-height:9em;border:1px solid var(--line);border-radius:8px;background:var(--bg);color:var(--ink);padding:10px;resize:vertical;box-sizing:border-box}
+.chips{display:flex;flex-wrap:wrap;gap:6px}
+.chip{font-family:var(--f-mono);font-size:.78rem;border:1px solid var(--line);background:transparent;color:var(--muted);border-radius:999px;padding:4px 10px;min-height:32px;cursor:pointer}
+.chip.done{color:var(--ink);border-color:var(--muted)}
+.chip.done::after{content:" ✓"}
+.chip.cur{background:var(--accent);border-color:var(--accent);color:var(--accent-ink)}
+
+.chartbox{overflow-x:auto}
+.chartbox svg{width:100%;min-width:320px;height:auto;display:block}
+svg .g{stroke:var(--line);stroke-width:.6}
+svg .gm{stroke-width:1}
+svg .ax{fill:var(--muted);font-family:var(--f-mono);font-size:9px}
+svg .tinL{stroke:var(--left);stroke-width:1.3;stroke-dasharray:4 3}
+svg .tinR{stroke:var(--right);stroke-width:1.3;stroke-dasharray:4 3}
+svg .tL{fill:var(--left);font-size:9px;font-weight:700}
+svg .tR{fill:var(--right);font-size:9px;font-weight:700}
+svg .r{stroke:var(--right);fill:none;stroke-width:1.6}
+svg .l{stroke:var(--left);fill:none;stroke-width:1.6}
+.legend{display:flex;gap:16px;flex-wrap:wrap;font-size:.82rem;color:var(--muted)}
+.legend b{font-family:var(--f-mono)}
+.lr{color:var(--right)} .ll{color:var(--left)}
+.findings{margin:0;padding-left:1.2em;display:flex;flex-direction:column;gap:6px}
+.findings li.alert{color:var(--err)}
+canvas{width:100%;height:180px;display:block;border-radius:8px;background:var(--sunk)}
+.note{font-size:.85rem;color:var(--muted)}
+.list{font-family:var(--f-mono);font-size:.85rem;font-variant-numeric:tabular-nums;color:var(--muted);display:flex;flex-wrap:wrap;gap:4px 12px}
+.msg{font-size:.9rem;color:var(--accent);font-weight:500;min-height:1.4em}
+.msg.err{color:var(--err)}
+audio{width:100%}
+.file{position:relative;overflow:hidden}
+.file input{position:absolute;inset:0;opacity:0;cursor:pointer;width:100%}
+
+.ears{display:grid;grid-template-columns:1fr;gap:12px}
+@media (min-width:600px){.ears{grid-template-columns:1fr 1fr}}
+.ear{border:1px solid var(--line);border-radius:10px;padding:12px;display:flex;flex-direction:column;gap:10px;min-width:0}
+.ear[data-ear="left"]{border-top:3px solid var(--left)}
+.ear[data-ear="right"]{border-top:3px solid var(--right)}
+.earhead{display:flex;justify-content:space-between;align-items:baseline;gap:8px}
+.earhead h3{font-size:1rem}
+.ear[data-ear="left"] h3{color:var(--left)} .ear[data-ear="right"] h3{color:var(--right)}
+.ear.off .efreq,.ear.off .ewidth{opacity:.45}
+
+.progress{height:8px;border-radius:999px;background:var(--sunk);overflow:hidden}
+.progress span{display:block;height:100%;width:0;background:var(--accent);transition:width .2s}
+.results{display:flex;flex-direction:column;gap:8px;margin:0;padding:0;list-style:none}
+.results li{border:1px solid var(--line);border-radius:8px;padding:10px 12px;display:flex;flex-direction:column;gap:6px;min-width:0}
+.results .name{font-weight:500;word-break:break-all}
+.results pre{margin:0;font-family:var(--f-mono);font-size:.72rem;white-space:pre-wrap;color:var(--muted)}
+details{background:var(--surface);border:1px solid var(--line);border-radius:10px;padding:12px 16px}
+summary{cursor:pointer;font-weight:700;min-height:32px;display:flex;align-items:center}
+details ul{margin:8px 0 4px;padding-left:1.2em;display:flex;flex-direction:column;gap:6px;font-size:.92rem}
+@media (prefers-reduced-motion: reduce){*{transition:none!important;animation:none!important}}
+</style>
+
+<div class="wrap">
+  <header>
+    <h1>耳鳴頻段工作台</h1>
+    <p class="sub">找出較弱的聽力頻段、配對耳鳴音調，再用左右耳各自的設定播放或處理音樂。請戴耳機使用。</p>
+    <div class="warn"><strong>開始前：</strong>把手機音量調到大約一半，整個測試過程中不要再改。任何時候聲音突然太大，先把耳機拿下來。這是自我篩檢工具，結果不能取代耳鼻喉科的聽力檢查。</div>
+  </header>
+
+  <nav class="tabs" role="tablist">
+    <button class="tab" role="tab" data-tab="test" aria-selected="true"><small>STEP 1</small>聽力篩檢</button>
+    <button class="tab" role="tab" data-tab="match" aria-selected="false"><small>STEP 2</small>音調配對</button>
+    <button class="tab" role="tab" data-tab="train" aria-selected="false"><small>STEP 3</small>聲音練習</button>
+  </nav>
+
+  <!-- ═══ STEP 1 ═══ -->
+  <section class="panel" id="test" role="tabpanel">
+    <div class="card">
+      <div class="how">
+        <h3 style="color:var(--ink)">怎麼測</h3>
+        <ol>
+          <li>選要測的耳朵，按「播放測試音」，會聽到一下一下的嗶聲。</li>
+          <li>先把音量往下降到聽不見，再慢慢往上調，<b>剛好又聽得到</b>時按「記錄」。</li>
+          <li>自動跳到下一個頻率。兩耳都測完，下方圖表會標出較弱的頻段。</li>
+        </ol>
+      </div>
+      <div class="row">
+        <span class="label">耳朵</span>
+        <div class="seg" id="htEar">
+          <button data-v="R" aria-pressed="true">右耳</button>
+          <button data-v="L" aria-pressed="false">左耳</button>
+        </div>
+        <label class="check"><input type="checkbox" id="htFine">加測 8.5k／9k／9.5k</label>
+      </div>
+      <div class="readout">
+        <div><div class="label">頻率</div><div class="big" id="htFreq">1,000 Hz</div></div>
+        <div><div class="label">音量</div><div class="mid" id="htLevel">-40 dBFS</div></div>
+      </div>
+      <input type="range" id="htSlider" min="-100" max="-10" step="1" value="-40" aria-label="測試音音量">
+      <div class="row">
+        <button class="btn" id="htDown5">−5 dB</button>
+        <button class="btn" id="htDown1">−1</button>
+        <button class="btn" id="htUp1">+1</button>
+        <button class="btn" id="htUp5">+5 dB</button>
+      </div>
+      <div class="row">
+        <button class="btn primary grow" id="htPlay">播放測試音</button>
+        <button class="btn grow" id="htRec">剛好聽得到，記錄</button>
+        <button class="btn ghost" id="htNR">調到最大仍聽不到</button>
+      </div>
+      <p class="msg" id="htMsg"></p>
+      <div class="chips" id="htChips"></div>
+    </div>
+
+    <div class="card">
+      <h2>篩檢結果</h2>
+      <div class="legend"><span class="lr"><b>○</b> 右耳</span><span class="ll"><b>×</b> 左耳</span><span><b>┆</b> 各耳的中心頻率</span></div>
+      <div class="chartbox" id="chart"></div>
+      <p class="note">縱軸是剛好聽得到時需要的音量，<b>點越往下，代表那個頻率越不敏感</b>。這裡的數值是相對值，沒有校準成醫療用的 dB HL。</p>
+      <ul class="findings" id="findings"></ul>
+      <div class="row"><button class="btn ghost" id="htClear">清除結果</button></div>
+    </div>
+  </section>
+
+  <!-- ═══ STEP 2 ═══ -->
+  <section class="panel" id="match" role="tabpanel" hidden>
+    <div class="card">
+      <div class="how">
+        <h3 style="color:var(--ink)">怎麼配對</h3>
+        <ol>
+          <li>選耳鳴所在的耳朵，在安靜的地方播放，先把音量調到和耳鳴差不多大。</li>
+          <li>拖動滑桿找出最像耳鳴的頻率；尖細單音選「純音」，沙沙聲選「窄頻噪音」。</li>
+          <li>用「低八度／原頻／高八度」來回比較，很多人會把 4 kHz 和 8 kHz 搞混。</li>
+          <li>按「記錄這次配對」，結果會套用到你選的那一耳。分幾天多配幾次，系統會取平均。</li>
+        </ol>
+      </div>
+      <div class="row">
+        <div class="seg" id="pmEar">
+          <button data-v="L" aria-pressed="true">左耳</button>
+          <button data-v="R" aria-pressed="false">右耳</button>
+          <button data-v="B" aria-pressed="false">雙耳</button>
+        </div>
+        <div class="seg" id="pmType">
+          <button data-v="tone" aria-pressed="true">純音</button>
+          <button data-v="nbn" aria-pressed="false">窄頻噪音</button>
+        </div>
+      </div>
+      <div class="readout">
+        <div><div class="label">正在播放</div><div class="big" id="pmFreq">4,000 Hz</div></div>
+      </div>
+      <input type="range" id="pmSlider" min="0" max="1000" step="1" aria-label="頻率">
+      <div class="row">
+        <button class="btn" id="pmSemiDown">−半音</button>
+        <button class="btn" id="pmSemiUp">+半音</button>
+        <div class="seg" id="pmMult">
+          <button data-v="0.5" aria-pressed="false">低八度</button>
+          <button data-v="1" aria-pressed="true">原頻</button>
+          <button data-v="2" aria-pressed="false">高八度</button>
+        </div>
+      </div>
+      <div>
+        <div class="label">音量 <span class="mono" id="pmLvlTxt">-35 dBFS</span></div>
+        <input type="range" id="pmLevel" min="-90" max="-15" step="1" value="-35" aria-label="配對音量">
+      </div>
+      <div class="row">
+        <button class="btn primary grow" id="pmPlay">播放</button>
+        <button class="btn grow" id="pmRec">記錄這次配對</button>
+      </div>
+      <p class="msg" id="pmMsg"></p>
+    </div>
+    <div class="card">
+      <h2>配對結果</h2>
+      <div class="readout">
+        <div><div class="label ll">左耳</div><div class="mid" id="pmAdoptL">—</div></div>
+        <div><div class="label lr">右耳</div><div class="mid" id="pmAdoptR">—</div></div>
+      </div>
+      <div class="list" id="pmList"></div>
+      <p class="note">配對結果會直接成為該耳在 STEP 3 的中心頻率。</p>
+      <div class="row"><button class="btn ghost" id="pmClear">清除配對紀錄</button></div>
+    </div>
+  </section>
+
+  <!-- ═══ STEP 3 ═══ -->
+  <section class="panel" id="train" role="tabpanel" hidden>
+    <div class="card">
+      <div class="row" style="justify-content:space-between">
+        <h2>左右耳設定</h2>
+        <span class="note" id="pfName"></span>
+      </div>
+      <div class="ears" id="ears"></div>
+      <div class="row">
+        <button class="btn small" id="copyLR">左耳設定 → 右耳</button>
+        <button class="btn small" id="copyRL">右耳設定 → 左耳</button>
+      </div>
+    </div>
+
+    <div class="card">
+      <h2>即時聆聽</h2>
+      <canvas id="spec" aria-label="左右耳即時頻譜"></canvas>
+      <div class="legend"><span class="ll">— 左耳</span><span class="lr">— 右耳</span><span>色塊是各耳處理的頻段</span></div>
+      <div class="row">
+        <span class="label">聲音來源</span>
+        <div class="seg" id="thSrc">
+          <button data-v="noise" aria-pressed="true">粉紅噪音</button>
+          <button data-v="music" aria-pressed="false">我的音樂</button>
+        </div>
+      </div>
+      <div id="musicBox" class="row" hidden>
+        <label class="btn file">選擇音樂檔…<input type="file" id="thFile" accept="audio/*"></label>
+        <span class="note" id="thFileName">還沒選擇檔案。</span>
+        <audio id="thAudio" controls loop playsinline></audio>
+      </div>
+      <div>
+        <div class="label">音量 <span class="mono" id="thVolTxt">30</span></div>
+        <input type="range" id="thVol" min="0" max="100" step="1" value="30" aria-label="播放音量">
+      </div>
+      <div class="row">
+        <button class="btn primary grow" id="thPlay">播放</button>
+        <span class="label">定時關閉</span>
+        <div class="seg" id="thTimer">
+          <button data-v="0" aria-pressed="true">不限</button>
+          <button data-v="15" aria-pressed="false">15 分</button>
+          <button data-v="30" aria-pressed="false">30 分</button>
+          <button data-v="60" aria-pressed="false">60 分</button>
+        </div>
+      </div>
+      <p class="msg" id="thMsg"></p>
+      <p class="note">音量調到比耳鳴稍小或差不多就好，不需要蓋過耳鳴。研究上建議每天聽 1–2 小時、持續數月。缺口音樂的效果和一般聽音樂差不多，可以當成日常聽音樂的一種方式，別期待它單獨把耳鳴治好。</p>
+    </div>
+
+    <div class="card">
+      <h2>輸出處理好的音檔</h2>
+      <p class="how">把音樂套用目前的左右耳設定、統一響度並加上淡入淡出，存起來以後可以用任何播放器在螢幕關閉時聆聽。處理方式和電腦版 AI Music Pro 完全相同。</p>
+      <div class="row">
+        <label class="btn file">選擇音樂檔（可多選）…<input type="file" id="rFiles" accept="audio/*" multiple></label>
+        <span class="note" id="rNames">還沒選擇檔案。</span>
+      </div>
+      <div class="row">
+        <span class="label">目標響度</span>
+        <div class="seg" id="rLufs">
+          <button data-v="-26" aria-pressed="false">−26 較小聲</button>
+          <button data-v="-23" aria-pressed="true">−23 LUFS</button>
+          <button data-v="-20" aria-pressed="false">−20 較大聲</button>
+        </div>
+      </div>
+      <div class="row"><button class="btn primary grow" id="rStart" disabled>開始處理</button></div>
+      <div class="progress" id="rProg" hidden><span></span></div>
+      <p class="msg" id="rMsg"></p>
+      <ul class="results" id="rList"></ul>
+      <audio id="rAudio" controls playsinline hidden></audio>
+      <div class="row" id="rSaveRow" hidden>
+        <button class="btn primary grow" id="rSave">存成 ZIP（內含 WAV）</button>
+        <button class="btn grow" id="rShare" hidden>分享…</button>
+      </div>
+      <p class="note" id="rSaveNote">網頁版只能把 WAV 包在 ZIP 裡存檔，解壓縮後即可播放。之後的 APK 版會直接存成音檔。輸出統一為 44.1 kHz。</p>
+    </div>
+
+    <div class="card">
+      <h2>設定檔</h2>
+      <p class="how">左右耳設定和電腦版共用同一種格式（tinnitus-profile/1）。可以複製到電腦版的「耳鳴 › 匯入設定檔」，或把電腦版匯出的內容貼進來。</p>
+      <textarea id="pfText" spellcheck="false" aria-label="設定檔 JSON"></textarea>
+      <div class="row">
+        <button class="btn small" id="pfCopy">複製</button>
+        <button class="btn small" id="pfApply">套用文字框內容</button>
+        <button class="btn small" id="pfSave" hidden>存成 .json 檔</button>
+        <label class="btn small file">匯入 .json 檔…<input type="file" id="pfFile" accept=".json,application/json"></label>
+        <button class="linkbtn" id="pfReset">還原成目前的設定</button>
+      </div>
+      <p class="msg" id="pfMsg"></p>
+    </div>
+
+    <div class="card">
+      <h2>殘餘抑制測試</h2>
+      <p class="how">在選定的耳朵播放 60 秒以該耳中心頻率為主的窄頻噪音，停止後觀察耳鳴有沒有暫時變小、持續多久。能明顯壓下來，通常代表配對的頻率是準的。</p>
+      <div class="row">
+        <div class="seg" id="riEar">
+          <button data-v="left" aria-pressed="true">左耳</button>
+          <button data-v="right" aria-pressed="false">右耳</button>
+        </div>
+        <span class="mono" id="riFreq"></span>
+      </div>
+      <div>
+        <div class="label">音量 <span class="mono" id="riLvlTxt">-35 dBFS</span></div>
+        <input type="range" id="riLevel" min="-80" max="-15" step="1" value="-35" aria-label="殘餘抑制音量">
+      </div>
+      <div class="row">
+        <button class="btn primary grow" id="riStart">開始 60 秒</button>
+        <span class="big" id="riClock" style="font-size:1.5rem">0:60</span>
+      </div>
+      <div class="row" id="riAsk" hidden>
+        <button class="btn primary grow" id="riBack">耳鳴回來了，停止計時</button>
+        <button class="btn grow" id="riNone">沒有變小</button>
+      </div>
+      <div class="list" id="riList"></div>
+    </div>
+  </section>
+
+  <details style="margin-top:16px">
+    <summary>在手機上使用的小技巧</summary>
+    <ul>
+      <li><b>iPhone：</b>關掉側邊的靜音開關，否則可能沒有聲音。到「設定 › 輔助使用 › 音訊／視覺」關閉「耳機調節」，播放時也關掉「空間音訊」，它們會改變頻率響應，影響篩檢結果。</li>
+      <li><b>Android：</b>關掉等化器、Dolby／音效增強這類功能，理由同上。</li>
+      <li>請使用耳機，先確認左右沒有戴反。有線耳機最準；藍牙也可以。</li>
+      <li>即時聆聽時螢幕要保持開著（頁面會盡量讓螢幕不休眠），鎖定螢幕後聲音可能會停。想長時間聆聽，請用「輸出處理好的音檔」存下來，再用手機的音樂播放器聽。</li>
+      <li>篩檢結果、配對紀錄和左右耳設定都存在這支手機的瀏覽器裡。</li>
+      <li>10 kHz 以上的結果受耳機影響很大，只能參考。單側變差、搏動性耳鳴或突然聽力下降，請直接就醫。</li>
+    </ul>
+  </details>
+</div>
+
+<script src="dsp.js"></script>
+<script>
+(function(){
+"use strict";
+const D=window.TinnitusDSP;
+const $=s=>document.querySelector(s), $$=s=>Array.from(document.querySelectorAll(s));
+const store={get(k,d){try{const v=localStorage.getItem(k);return v==null?d:JSON.parse(v)}catch(e){return d}},set(k,v){try{localStorage.setItem(k,JSON.stringify(v))}catch(e){}}};
+const clamp=(v,a,b)=>Math.min(b,Math.max(a,v));
+const fmtHz=f=>Math.round(f).toLocaleString('en-US')+' Hz';
+const shortHz=f=>f>=1000?(f/1000).toString().replace(/\.0+$/,'')+'k':String(f);
+const dbToGain=db=>Math.pow(10,db/20);
+const EAR_ZH={left:'左耳',right:'右耳'};
+const EAR_KEY={L:'left',R:'right'};
+function esc(s){return String(s).replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]))}
+function msg(id,text,err){const el=$(id);el.textContent=text||'';el.classList.toggle('err',!!err)}
+
+/* ── platform: APK (Capacitor) / claude.ai artifact / plain browser ── */
+const Native=(()=>{const C=window.Capacitor;if(!C||typeof C.isNativePlatform!=='function'||!C.isNativePlatform())return null;
+  const P=C.Plugins||{};return P.Filesystem?{fs:P.Filesystem,share:P.Share||null,awake:P.KeepAwake||null}:null})();
+const IN_ARTIFACT=!!(window.claude&&window.claude.use);
+const SAVE_DIR='耳鳴工作台';
+function blobToBase64(blob){return new Promise((res,rej)=>{const r=new FileReader();r.onload=()=>res(String(r.result).split(',')[1]||'');r.onerror=()=>rej(r.error);r.readAsDataURL(blob)})}
+/** APK：分段寫入 文件/耳鳴工作台/，避免一次傳大檔造成記憶體不足。回傳檔案 URI。 */
+async function nativeSave(name,blob,onProg){
+  try{if(Native.fs.checkPermissions){const st=await Native.fs.checkPermissions();
+    if(st.publicStorage!=='granted'){const r=await Native.fs.requestPermissions();if(r.publicStorage!=='granted')throw new Error('沒有儲存權限，請到系統設定允許「檔案」權限後再試一次。')}}}
+  catch(e){if(/權限/.test(e.message))throw e}
+  const path=SAVE_DIR+'/'+name,CH=3*1024*1024; // 3 的倍數，base64 分段才能直接接起來
+  for(let off=0,first=true;off<blob.size||first;off+=CH,first=false){
+    const data=await blobToBase64(blob.slice(off,off+CH));
+    if(first)await Native.fs.writeFile({path,data,directory:'DOCUMENTS',recursive:true});
+    else await Native.fs.appendFile({path,data,directory:'DOCUMENTS'});
+    if(onProg)onProg(Math.min(1,(off+CH)/Math.max(1,blob.size)));
+  }
+  const r=await Native.fs.getUri({path,directory:'DOCUMENTS'});return r.uri}
+/** 一般瀏覽器（不是 claude.ai，也不是 APK）用連結下載 */
+function browserSave(name,blob){const a=document.createElement('a');a.href=URL.createObjectURL(blob);a.download=name;document.body.appendChild(a);a.click();setTimeout(()=>{URL.revokeObjectURL(a.href);a.remove()},4000)}
+
+/* ── audio basics ── */
+let ctx=null, whiteBuf=null, pinkBuf=null;
+function audio(){
+  if(!ctx){const AC=window.AudioContext||window.webkitAudioContext;ctx=new AC();try{if(navigator.audioSession)navigator.audioSession.type='playback'}catch(e){}}
+  if(ctx.state!=='running'){try{ctx.resume()}catch(e){}}
+  return ctx;
+}
+function getWhite(c){if(whiteBuf)return whiteBuf;const n=c.sampleRate*4,b=c.createBuffer(1,n,c.sampleRate),d=b.getChannelData(0);for(let i=0;i<n;i++)d[i]=Math.random()*2-1;return whiteBuf=b}
+function getPink(c){if(pinkBuf)return pinkBuf;const n=c.sampleRate*8,b=c.createBuffer(2,n,c.sampleRate);
+  for(let ch=0;ch<2;ch++){const d=b.getChannelData(ch);let b0=0,b1=0,b2=0,b3=0,b4=0,b5=0,b6=0;
+    for(let i=0;i<n;i++){const w=Math.random()*2-1;b0=.99886*b0+w*.0555179;b1=.99332*b1+w*.0750759;b2=.969*b2+w*.153852;b3=.8665*b3+w*.3104856;b4=.55*b4+w*.5329522;b5=-.7616*b5-w*.016898;d[i]=(b0+b1+b2+b3+b4+b5+b6+w*.5362)*.11;b6=w*.115926}}
+  return pinkBuf=b}
+function earNode(c,ear){const m=c.createChannelMerger(2),g=c.createGain();if(ear!=='R')g.connect(m,0,0);if(ear!=='L')g.connect(m,0,1);m.connect(c.destination);return{input:g,merger:m}}
+let wakeLock=null;
+async function keepAwake(on){if(Native&&Native.awake){try{on?await Native.awake.keepAwake():await Native.awake.allowSleep()}catch(e){}return}try{if(on&&'wakeLock' in navigator&&!wakeLock){wakeLock=await navigator.wakeLock.request('screen');wakeLock.addEventListener('release',()=>{wakeLock=null})}else if(!on&&wakeLock){await wakeLock.release();wakeLock=null}}catch(e){}}
+function setSeg(id,v){$$('#'+id+' button').forEach(b=>b.setAttribute('aria-pressed',String(b.dataset.v===String(v))))}
+function onSeg(id,fn){$$('#'+id+' button').forEach(b=>b.addEventListener('click',()=>{setSeg(id,b.dataset.v);fn(b.dataset.v)}))}
+
+/* ── profile (shared with desktop) ── */
+function initialProfile(){
+  try{const s=store.get('tw_profile',null);if(s)return D.validateProfile(s)}catch(e){}
+  const old=Number(store.get('tw_f',0));const f=old>=200&&old<=16000?old:4000;
+  return D.makeProfile({mode:'notch',center_hz:f,width_oct:1},{mode:'off',center_hz:f,width_oct:1},'我的設定');
+}
+let profile=initialProfile();
+function clone(o){return JSON.parse(JSON.stringify(o))}
+function setProfile(p){
+  profile=D.validateProfile(p);store.set('tw_profile',profile);
+  renderEars();rebuildChains();chart();analysis();drawSpec();renderProfileText();riRender();pmRenderAdopted();
+}
+function setEar(ear,patch){const p=clone(profile);Object.assign(p.ears[ear],patch);setProfile(p)}
+
+/* ── tabs ── */
+const TABS=['test','match','train'];
+function showTab(id){$$('.tab').forEach(b=>b.setAttribute('aria-selected',String(b.dataset.tab===id)));$$('.panel').forEach(p=>p.hidden=p.id!==id);stopAll();if(id==='train')setTimeout(drawSpec,0)}
+$$('.tab').forEach(b=>b.addEventListener('click',()=>showTab(b.dataset.tab)));
+
+/* ════════ STEP 1: hearing screen ════════ */
+const BASE_FREQS=[250,500,1000,2000,3000,4000,6000,8000,10000,12000,14000,16000];
+const FINE=[8500,9000,9500];
+const ht={ear:'R',f:1000,level:-40,nodes:null,fine:!!store.get('tw_fine',false)};
+function freqs(){return ht.fine?[...BASE_FREQS,...FINE].sort((a,b)=>a-b):BASE_FREQS}
+let results=store.get('tw_results',{L:{},R:{}});if(!results||!results.L)results={L:{},R:{}};
+function htKill(){if(ht.nodes){try{ht.nodes.osc.stop()}catch(e){}try{ht.nodes.merger.disconnect()}catch(e){}ht.nodes=null}}
+function htStop(){if(ht.nodes){htKill();keepAwake(false)}htRender()}
+function htStart(){const c=audio();htKill();
+  const osc=c.createOscillator();osc.frequency.value=ht.f;const env=c.createGain();env.gain.value=0;const lvl=c.createGain();lvl.gain.value=dbToGain(ht.level);
+  const r=earNode(c,ht.ear);osc.connect(env);env.connect(lvl);lvl.connect(r.input);
+  const t0=c.currentTime+.05;for(let i=0;i<360;i++){const t=t0+i*.5;env.gain.setValueAtTime(0,t);env.gain.linearRampToValueAtTime(1,t+.025);env.gain.setValueAtTime(1,t+.27);env.gain.linearRampToValueAtTime(0,t+.3)}
+  osc.start();osc.stop(t0+180);osc.onended=()=>{if(ht.nodes&&ht.nodes.osc===osc){ht.nodes=null;htRender()}};
+  ht.nodes={osc,lvl,merger:r.merger};keepAwake(true);htRender()}
+function htSetLevel(db){ht.level=clamp(Math.round(db),-100,-10);if(ht.nodes&&ctx)ht.nodes.lvl.gain.setTargetAtTime(dbToGain(ht.level),ctx.currentTime,.02);htRender()}
+function htRender(){$('#htFreq').textContent=fmtHz(ht.f);$('#htLevel').textContent=ht.level+' dBFS';$('#htSlider').value=ht.level;$('#htFine').checked=ht.fine;
+  const p=$('#htPlay');p.textContent=ht.nodes?'停止':'播放測試音';p.classList.toggle('on',!!ht.nodes);
+  $('#htChips').innerHTML=freqs().map(fr=>`<button class="chip${results[ht.ear][fr]?' done':''}${fr===ht.f?' cur':''}" data-f="${fr}">${shortHz(fr)}</button>`).join('')}
+$('#htChips').addEventListener('click',e=>{const b=e.target.closest('.chip');if(!b)return;ht.f=+b.dataset.f;ht.level=-40;if(ht.nodes)htStart();else htRender()});
+function htRecord(nr){const f=ht.f;results[ht.ear][f]={db:nr?-10:ht.level,nr:!!nr};store.set('tw_results',results);
+  htStop();ht.level=-40;const list=freqs(),i=list.indexOf(f);
+  if(i<list.length-1){ht.f=list[i+1];msg('#htMsg',`已記錄 ${fmtHz(f)}。按「播放測試音」繼續下一個頻率。`)}
+  else msg('#htMsg',(ht.ear==='R'?'右耳':'左耳')+'測完了。切換到另一耳，從 1,000 Hz 再測一次。');
+  htRender();chart();analysis()}
+onSeg('htEar',v=>{ht.ear=v;ht.f=1000;ht.level=-40;msg('#htMsg','');if(ht.nodes)htStart();else htRender()});
+$('#htFine').addEventListener('change',e=>{ht.fine=e.target.checked;store.set('tw_fine',ht.fine);if(!freqs().includes(ht.f))ht.f=8000;htRender();msg('#htMsg',ht.fine?'已加入 8.5k、9k、9.5k 三個測點，可以直接點下方的頻率去測。':'')});
+$('#htSlider').addEventListener('input',e=>htSetLevel(+e.target.value));
+[['#htDown5',-5],['#htDown1',-1],['#htUp1',1],['#htUp5',5]].forEach(([s,d])=>$(s).addEventListener('click',()=>htSetLevel(ht.level+d)));
+$('#htPlay').addEventListener('click',()=>{ht.nodes?htStop():htStart()});
+$('#htRec').addEventListener('click',()=>htRecord(false));
+$('#htNR').addEventListener('click',()=>htRecord(true));
+function armConfirm(btn,label,action){let t=null;btn.addEventListener('click',()=>{if(t){clearTimeout(t);t=null;btn.textContent=label;action();return}btn.textContent='再按一次確認';t=setTimeout(()=>{t=null;btn.textContent=label},3000)})}
+armConfirm($('#htClear'),'清除結果',()=>{results={L:{},R:{}};store.set('tw_results',results);htRender();chart();analysis();msg('#htMsg','結果已清除。')});
+
+function chart(){
+  const W=360,H=236,L=40,R=14,T=16,B=30;
+  const x=f=>L+Math.log2(f/250)/6*(W-L-R), y=db=>T+(db+100)/90*(H-T-B);
+  let s='';
+  for(let db=-100;db<=-10;db+=10){const yy=y(db).toFixed(1);s+=`<line class="g${db%20===0?' gm':''}" x1="${L}" x2="${W-R}" y1="${yy}" y2="${yy}"/>`;if(db%20===0||db===-10)s+=`<text class="ax" x="${L-5}" y="${(+yy+3).toFixed(1)}" text-anchor="end">${db}</text>`}
+  [250,500,1000,2000,4000,8000,16000].forEach(f=>{const xx=x(f).toFixed(1);s+=`<line class="g gm" x1="${xx}" x2="${xx}" y1="${T}" y2="${H-B}"/><text class="ax" x="${xx}" y="${H-B+13}" text-anchor="middle">${shortHz(f)}</text>`});
+  [3000,6000,10000,12000,14000].forEach(f=>{const xx=x(f).toFixed(1);s+=`<line class="g" x1="${xx}" x2="${xx}" y1="${T}" y2="${H-B}"/>`});
+  s+=`<text class="ax" x="${W-R}" y="${H-4}" text-anchor="end">Hz</text><text class="ax" x="${L-5}" y="${T-6}" text-anchor="end">dBFS</text>`;
+  [['left','tinL','tL','左'],['right','tinR','tR','右']].forEach(([e,lc,tc,lab],k)=>{const d=profile.ears[e];if(d.mode==='off')return;const xx=x(clamp(d.center_hz,250,16000)).toFixed(1);
+    s+=`<line class="${lc}" x1="${xx}" x2="${xx}" y1="${T}" y2="${H-B}"/><text class="${tc}" x="${(+xx+(k?3:-3)).toFixed(1)}" y="${T-5}" text-anchor="${k?'start':'end'}">${lab}</text>`});
+  ['R','L'].forEach(ear=>{const pts=Object.entries(results[ear]).map(([f,v])=>[+f,v]).sort((a,b)=>a[0]-b[0]);if(!pts.length)return;
+    const cls=ear==='R'?'r':'l';s+=`<polyline class="${cls}" points="${pts.map(([f,v])=>x(f).toFixed(1)+','+y(v.db).toFixed(1)).join(' ')}" stroke-opacity=".55"/>`;
+    pts.forEach(([f,v])=>{const cx=x(f),cy=y(v.db);
+      if(ear==='R')s+=`<circle class="r" cx="${cx.toFixed(1)}" cy="${cy.toFixed(1)}" r="4.5"/>`;
+      else s+=`<path class="l" d="M${(cx-4).toFixed(1)} ${(cy-4).toFixed(1)}L${(cx+4).toFixed(1)} ${(cy+4).toFixed(1)}M${(cx+4).toFixed(1)} ${(cy-4).toFixed(1)}L${(cx-4).toFixed(1)} ${(cy+4).toFixed(1)}"/>`;
+      if(v.nr)s+=`<text class="${ear==='R'?'tR':'tL'}" x="${(cx+(ear==='R'?6:-12)).toFixed(1)}" y="${(cy+12).toFixed(1)}">↓</text>`})});
+  $('#chart').innerHTML=`<svg viewBox="0 0 ${W} ${H}" role="img" aria-label="聽力篩檢結果圖">${s}</svg>`}
+
+function median(a){const s=[...a].sort((p,q)=>p-q),m=s.length>>1;return s.length%2?s[m]:(s[m-1]+s[m])/2}
+function analysis(){
+  const out=[];
+  ['R','L'].forEach(ear=>{const name=ear==='R'?'右耳':'左耳';const key=EAR_KEY[ear];const ent=Object.entries(results[ear]).map(([f,v])=>[+f,v]);if(ent.length<4)return;
+    const ref=ent.filter(([f])=>f>=500&&f<=4000).map(([,v])=>v.db);if(ref.length<2)return;const med=median(ref);
+    const weak=ent.filter(([,v])=>v.db-med>=15).sort((a,b)=>a[0]-b[0]);
+    if(weak.length){const worst=weak.reduce((a,b)=>b[1].db>a[1].db?b:a)[0];
+      out.push(['',`${name}在 <b class="mono">${weak.map(([f])=>shortHz(f)).join('、')}</b> 需要的音量比你自己 500–4,000 Hz 的中位數多 15 dB 以上，可能是較弱的頻段。 <button class="linkbtn" data-set-ear="${key}" data-f="${worst}">把${name}中心頻率設為 ${shortHz(worst)}</button>`]);
+      if(weak.some(([f])=>f>=10000))out.push(['',`${name} 10 kHz 以上的結果很受耳機影響，只能參考。`])}
+    else out.push(['',`${name}沒有明顯比其他頻段弱的地方。`])});
+  const all=[...new Set([...Object.keys(results.R),...Object.keys(results.L)].map(Number))].sort((a,b)=>a-b);
+  const asym=all.filter(f=>results.R[f]&&results.L[f]&&Math.abs(results.R[f].db-results.L[f].db)>=15&&f<=10000);
+  if(asym.length)out.push(['alert',`兩耳在 <b class="mono">${asym.map(shortHz).join('、')}</b> 相差 15 dB 以上。請先左右對調耳機再測一次排除耳機因素；如果還是一樣，單側較差值得給耳鼻喉科檢查。`]);
+  if(!out.length)out.push(['','每一耳至少測 4 個頻率（包含 500–4,000 Hz 中的兩個）後，這裡會列出可能較弱的頻段。']);
+  $('#findings').innerHTML=out.map(([c,t])=>`<li class="${c}">${t}</li>`).join('')}
+$('#findings').addEventListener('click',e=>{const b=e.target.closest('[data-set-ear]');if(!b)return;const ear=b.dataset.setEar,f=+b.dataset.f;
+  setEar(ear,{center_hz:f,mode:profile.ears[ear].mode==='off'?'notch':profile.ears[ear].mode});msg('#htMsg',`${EAR_ZH[ear]}中心頻率已設為 ${fmtHz(f)}，到 STEP 3 可以聆聽。`)});
+
+/* ════════ STEP 2: pitch match ════════ */
+const pm={base:profile.ears.left.center_hz,mult:1,type:'tone',ear:'L',level:-35,nodes:null};
+let matches=store.get('tw_matches2',null);
+if(!Array.isArray(matches)){const old=store.get('tw_matches',[]);matches=Array.isArray(old)?old.map(f=>({f,ear:'B'})):[]}
+const fToPos=f=>Math.round(Math.log2(f/250)/6*1000), posToF=p=>250*Math.pow(2,6*p/1000);
+const pmFreq=()=>clamp(pm.base*pm.mult,125,18000);
+function pmKill(){if(pm.nodes){try{pm.nodes.src.stop()}catch(e){}try{pm.nodes.merger.disconnect()}catch(e){}pm.nodes=null}}
+function pmStop(){if(pm.nodes){pmKill();keepAwake(false)}pmRender()}
+function pmStart(){const c=audio();pmKill();
+  const lvl=c.createGain();lvl.gain.value=dbToGain(pm.level);const r=earNode(c,pm.ear);const n={lvl,merger:r.merger};
+  if(pm.type==='tone'){const o=c.createOscillator();o.frequency.value=pmFreq();o.connect(lvl);o.start();n.src=o;n.osc=o}
+  else{const s=c.createBufferSource();s.buffer=getWhite(c);s.loop=true;const b1=c.createBiquadFilter(),b2=c.createBiquadFilter();[b1,b2].forEach(b=>{b.type='bandpass';b.Q.value=5;b.frequency.value=pmFreq()});
+    const mk=c.createGain();mk.gain.value=6;s.connect(b1);b1.connect(b2);b2.connect(mk);mk.connect(lvl);s.start();n.src=s;n.bps=[b1,b2]}
+  lvl.connect(r.input);pm.nodes=n;keepAwake(true);pmRender()}
+function pmUpdate(){if(!pm.nodes||!ctx)return;const t=ctx.currentTime,f=pmFreq();if(pm.nodes.osc)pm.nodes.osc.frequency.setTargetAtTime(f,t,.01);if(pm.nodes.bps)pm.nodes.bps.forEach(b=>b.frequency.setTargetAtTime(f,t,.01));pm.nodes.lvl.gain.setTargetAtTime(dbToGain(pm.level),t,.02)}
+function pmRender(){$('#pmFreq').textContent=fmtHz(pmFreq());$('#pmSlider').value=fToPos(pm.base);$('#pmLvlTxt').textContent=pm.level+' dBFS';
+  const p=$('#pmPlay');p.textContent=pm.nodes?'停止':'播放';p.classList.toggle('on',!!pm.nodes)}
+function geo(list){return Math.exp(list.reduce((a,v)=>a+Math.log(v),0)/list.length)}
+function earMatches(e){return matches.filter(m=>m.ear==='B'||m.ear===e).map(m=>m.f)}
+function pmRenderAdopted(){
+  [['L','left','#pmAdoptL'],['R','right','#pmAdoptR']].forEach(([k,e,id])=>{const ms=earMatches(k);
+    $(id).textContent=ms.length?`${fmtHz(profile.ears[e].center_hz)}（${ms.length} 次平均）`:`${fmtHz(profile.ears[e].center_hz)}（未配對）`});
+  $('#pmList').innerHTML=matches.map((m,i)=>`<span>#${i+1} ${m.ear==='B'?'雙':m.ear==='L'?'左':'右'} ${fmtHz(m.f)}</span>`).join('')}
+function setBase(f){pm.base=clamp(f,250,16000);pmUpdate();pmRender()}
+$('#pmSlider').addEventListener('input',e=>setBase(posToF(+e.target.value)));
+$('#pmSemiDown').addEventListener('click',()=>setBase(pm.base/Math.pow(2,1/12)));
+$('#pmSemiUp').addEventListener('click',()=>setBase(pm.base*Math.pow(2,1/12)));
+onSeg('pmMult',v=>{pm.mult=+v;pmUpdate();pmRender()});
+onSeg('pmType',v=>{pm.type=v;if(pm.nodes)pmStart()});
+onSeg('pmEar',v=>{pm.ear=v;if(v!=='B')setBase(profile.ears[EAR_KEY[v]].center_hz);if(pm.nodes)pmStart()});
+$('#pmLevel').addEventListener('input',e=>{pm.level=+e.target.value;pmUpdate();pmRender()});
+$('#pmPlay').addEventListener('click',()=>{pm.nodes?pmStop():pmStart()});
+$('#pmRec').addEventListener('click',()=>{const f=Math.round(clamp(pmFreq(),200,16000));matches.push({f,ear:pm.ear});if(matches.length>20)matches=matches.slice(-20);store.set('tw_matches2',matches);
+  const p=clone(profile);const targets=pm.ear==='B'?['left','right']:[EAR_KEY[pm.ear]];
+  targets.forEach(e=>{const k=e==='left'?'L':'R';p.ears[e].center_hz=Math.round(geo(earMatches(k)));if(p.ears[e].mode==='off')p.ears[e].mode='notch'});
+  setProfile(p);msg('#pmMsg',`已記錄 ${fmtHz(f)}，套用到${targets.map(e=>EAR_ZH[e]).join('和')}。`)});
+armConfirm($('#pmClear'),'清除配對紀錄',()=>{matches=[];store.set('tw_matches2',matches);pmRenderAdopted();msg('#pmMsg','配對紀錄已清除，左右耳設定保留目前的值。')});
+
+/* ════════ STEP 3: ear editors ════════ */
+const FMIN=200,FMAX=16000;
+const sPos=f=>Math.round(1000*Math.log(f/FMIN)/Math.log(FMAX/FMIN)), sF=p=>Math.round(FMIN*Math.pow(FMAX/FMIN,p/1000)/10)*10;
+$('#ears').innerHTML=['left','right'].map(e=>`
+  <div class="ear" data-ear="${e}">
+    <div class="earhead"><h3>${EAR_ZH[e]}</h3><span class="note mono" id="eb-${e}"></span></div>
+    <div class="seg" id="em-${e}"><button data-v="off">關閉</button><button data-v="notch">缺口</button><button data-v="boost">補強</button></div>
+    <div class="efreq">
+      <div class="row"><span class="label">中心頻率</span><input type="number" id="ef-${e}" min="200" max="16000" step="10" aria-label="${EAR_ZH[e]}中心頻率"><span class="note">Hz</span></div>
+      <input type="range" id="es-${e}" min="0" max="1000" step="1" aria-label="${EAR_ZH[e]}中心頻率滑桿">
+    </div>
+    <div class="ewidth row"><span class="label">寬度</span>
+      <div class="seg" id="ew-${e}"><button data-v="0.5">½ 八度</button><button data-v="1">1 八度</button><button data-v="1.5">1½ 八度</button></div>
+    </div>
+  </div>`).join('');
+['left','right'].forEach(e=>{
+  onSeg('em-'+e,v=>setEar(e,{mode:v}));
+  onSeg('ew-'+e,v=>setEar(e,{width_oct:+v}));
+  $('#ef-'+e).addEventListener('change',ev=>{const v=+ev.target.value;if(v>=200&&v<=16000)setEar(e,{center_hz:v});else ev.target.value=Math.round(profile.ears[e].center_hz)});
+  let raf=0;$('#es-'+e).addEventListener('input',ev=>{const f=sF(+ev.target.value);$('#ef-'+e).value=f;cancelAnimationFrame(raf);raf=requestAnimationFrame(()=>setEar(e,{center_hz:f}))});
+});
+function renderEars(){
+  $('#pfName').textContent=profile.name;
+  ['left','right'].forEach(e=>{const d=profile.ears[e];setSeg('em-'+e,d.mode);setSeg('ew-'+e,String(d.width_oct));
+    $('#ef-'+e).value=Math.round(d.center_hz);$('#es-'+e).value=sPos(d.center_hz);
+    $('.ear[data-ear="'+e+'"]').classList.toggle('off',d.mode==='off');
+    const [lo,hi]=D.bandEdges(d.center_hz,d.width_oct,44100);
+    $('#eb-'+e).textContent=d.mode==='off'?'不處理':(d.mode==='notch'?'濾掉 ':'加強 ')+Math.round(lo).toLocaleString('en-US')+'–'+Math.round(hi).toLocaleString('en-US')+' Hz'});
+}
+$('#copyLR').addEventListener('click',()=>{const p=clone(profile);p.ears.right=clone(p.ears.left);setProfile(p)});
+$('#copyRL').addEventListener('click',()=>{const p=clone(profile);p.ears.left=clone(p.ears.right);setProfile(p)});
+
+/* ── live listening: per-ear IIR chains (same coefficients as desktop) ── */
+const th={src:'noise',vol:30,timerMin:0};
+let tg=null,noiseSrc=null,mediaSrc=null,sleepT=null,raf=null;
+const audioEl=$('#thAudio');
+const volGain=()=>Math.pow(th.vol/100,2)*.7;
+function graph(){const c=audio();if(tg)return tg;
+  const pre=c.createGain();pre.channelCount=2;pre.channelCountMode='explicit';pre.channelInterpretation='speakers';
+  const split=c.createChannelSplitter(2),merge=c.createChannelMerger(2),master=c.createGain();
+  const an=[c.createAnalyser(),c.createAnalyser()];an.forEach(a=>{a.fftSize=4096;a.smoothingTimeConstant=.8});
+  pre.connect(split);merge.connect(master);master.connect(c.destination);master.gain.value=volGain();
+  tg={pre,split,merge,master,an,chains:[[],[]]};rebuildChains();return tg}
+function rebuildChains(){if(!tg||!ctx)return;const c=ctx;
+  try{tg.split.disconnect()}catch(e){}tg.chains.flat().forEach(n=>{try{n.disconnect()}catch(e){}});tg.an.forEach(a=>{try{a.disconnect()}catch(e){}});
+  tg.chains=[[],[]];
+  ['left','right'].forEach((e,i)=>{let nodes=[];
+    try{const d=D.designEar(c.sampleRate,profile.ears[e]);if(d.sos)nodes=d.sos.map(s=>c.createIIRFilter([s[0],s[1],s[2]],[1,s[4],s[5]]))}catch(err){nodes=[]}
+    if(nodes.length){tg.split.connect(nodes[0],i,0);for(let k=0;k<nodes.length-1;k++)nodes[k].connect(nodes[k+1]);nodes[nodes.length-1].connect(tg.an[i])}
+    else tg.split.connect(tg.an[i],i,0);
+    tg.an[i].connect(tg.merge,0,i);tg.chains[i]=nodes})}
+const isPlaying=()=>!!noiseSrc||(!!mediaSrc&&!audioEl.paused);
+function thRender(){const p=$('#thPlay');const on=isPlaying();p.textContent=on?'停止':'播放';p.classList.toggle('on',on);$('#thVolTxt').textContent=th.vol}
+function armTimer(){clearTimeout(sleepT);sleepT=null;if(!th.timerMin||!isPlaying())return;
+  sleepT=setTimeout(()=>{if(!tg)return;tg.master.gain.setTargetAtTime(0,ctx.currentTime,2.5);setTimeout(()=>{thStopAll();if(tg)tg.master.gain.value=volGain();msg('#thMsg','定時到了，已停止播放。')},9000)},th.timerMin*60000)}
+function startNoise(){const g=graph();if(noiseSrc)return;const s=ctx.createBufferSource();s.buffer=getPink(ctx);s.loop=true;s.connect(g.pre);s.start();noiseSrc=s;g.master.gain.setTargetAtTime(volGain(),ctx.currentTime,.05);keepAwake(true);armTimer();thRender();loop()}
+function stopNoise(){if(noiseSrc){try{noiseSrc.stop()}catch(e){}try{noiseSrc.disconnect()}catch(e){}noiseSrc=null}}
+function thStopAll(){stopNoise();if(!audioEl.paused)audioEl.pause();clearTimeout(sleepT);sleepT=null;keepAwake(false);thRender();drawSpec()}
+function ensureMedia(){const g=graph();if(!mediaSrc){mediaSrc=ctx.createMediaElementSource(audioEl);mediaSrc.connect(g.pre)}}
+$('#thPlay').addEventListener('click',()=>{msg('#thMsg','');
+  if(isPlaying()){thStopAll();return}
+  if(th.src==='noise')startNoise();
+  else{if(!audioEl.src){msg('#thMsg','先選一個音樂檔。',true);return}ensureMedia();audioEl.play().catch(()=>msg('#thMsg','瀏覽器擋下了播放，請再按一次。',true))}});
+audioEl.addEventListener('play',()=>{ensureMedia();stopNoise();keepAwake(true);armTimer();thRender();loop()});
+audioEl.addEventListener('pause',()=>{if(!noiseSrc){keepAwake(false);clearTimeout(sleepT)}thRender()});
+$('#thFile').addEventListener('change',e=>{const f=e.target.files&&e.target.files[0];if(!f)return;thStopAll();try{if(audioEl.dataset.url)URL.revokeObjectURL(audioEl.dataset.url)}catch(er){}
+  const u=URL.createObjectURL(f);audioEl.dataset.url=u;audioEl.src=u;$('#thFileName').textContent=f.name;msg('#thMsg','已載入，按播放開始。')});
+onSeg('thSrc',v=>{th.src=v;$('#musicBox').hidden=v!=='music';thStopAll()});
+onSeg('thTimer',v=>{th.timerMin=+v;armTimer()});
+$('#thVol').addEventListener('input',e=>{th.vol=+e.target.value;if(tg&&ctx)tg.master.gain.setTargetAtTime(volGain(),ctx.currentTime,.03);thRender()});
+
+/* spectrum: both ears */
+const cv=$('#spec');
+function tok(n){return getComputedStyle(document.documentElement).getPropertyValue(n).trim()}
+let specBufs=[null,null];
+function drawSpec(live){const dpr=window.devicePixelRatio||1,w=cv.clientWidth,h=cv.clientHeight;if(!w)return;
+  if(cv.width!==Math.round(w*dpr)||cv.height!==Math.round(h*dpr)){cv.width=Math.round(w*dpr);cv.height=Math.round(h*dpr)}
+  const g=cv.getContext('2d');g.setTransform(dpr,0,0,dpr,0,0);g.clearRect(0,0,w,h);
+  const fx=f=>Math.log(f/100)/Math.log(200)*w, fy=db=>clamp((-20-db)/90,0,1)*(h-18);
+  g.strokeStyle=tok('--line');g.lineWidth=1;g.fillStyle=tok('--muted');g.font='10px '+tok('--f-mono');
+  [125,250,500,1000,2000,4000,8000,16000].forEach(f=>{const x=fx(f);g.beginPath();g.moveTo(x,0);g.lineTo(x,h-16);g.stroke();g.fillText(shortHz(f),x+2,h-4)});
+  const half=(h-16)/2;
+  [['left','--left',0],['right','--right',1]].forEach(([e,col,i])=>{const d=profile.ears[e];if(d.mode==='off')return;
+    const [lo,hi]=D.bandEdges(d.center_hz,d.width_oct,44100);g.fillStyle=tok(col);g.globalAlpha=.13;g.fillRect(fx(lo),i*half,fx(hi)-fx(lo),half);g.globalAlpha=1;
+    g.strokeStyle=tok(col);g.setLineDash([4,3]);g.beginPath();g.moveTo(fx(d.center_hz),i*half);g.lineTo(fx(d.center_hz),(i+1)*half);g.stroke();g.setLineDash([])});
+  if(live&&tg){const sr=ctx.sampleRate;
+    [['--left',0],['--right',1]].forEach(([col,i])=>{const an=tg.an[i];if(!specBufs[i]||specBufs[i].length!==an.frequencyBinCount)specBufs[i]=new Float32Array(an.frequencyBinCount);
+      an.getFloatFrequencyData(specBufs[i]);const data=specBufs[i],bins=data.length;g.beginPath();
+      for(let x=0;x<=w;x+=2){const fr=100*Math.pow(200,x/w);const k=Math.min(bins-1,Math.round(fr/(sr/2)*bins));const v=isFinite(data[k])?data[k]:-140;x?g.lineTo(x,fy(v)):g.moveTo(x,fy(v))}
+      g.strokeStyle=tok(col);g.lineWidth=1.4;g.stroke()})}
+  else{g.fillStyle=tok('--muted');g.font='12px '+tok('--f-body');g.fillText('按播放後顯示左右耳即時頻譜',10,18)}}
+function loop(){if(raf)return;const step=()=>{if(!tg||!isPlaying()){raf=null;drawSpec();return}drawSpec(true);raf=requestAnimationFrame(step)};raf=requestAnimationFrame(step)}
+window.addEventListener('resize',()=>{if(!isPlaying())drawSpec()});
+try{matchMedia('(prefers-color-scheme: dark)').addEventListener('change',()=>{chart();drawSpec()})}catch(e){}
+
+/* ── offline render (Web Worker running the same dsp.js) ── */
+let rFiles=[],rOut=[],workerUrl=null,downloads=null;
+async function makeWorker(){
+  if(!workerUrl){const code=await (await fetch('dsp.js')).text();
+    const wcode=code+`
+;self.onmessage=function(e){var m=e.data;try{var r=TinnitusDSP.process(m.chans,m.sr,m.profile,{onProgress:function(p){self.postMessage({progress:p})}});
+var wav=TinnitusDSP.encodeWav16(r.channels,m.sr);self.postMessage({done:true,wav:wav,summary:TinnitusDSP.summary(r.report),report:r.report},[wav]);}
+catch(err){self.postMessage({error:String(err&&err.message||err)})}};`;
+    workerUrl=URL.createObjectURL(new Blob([wcode],{type:'text/javascript'}))}
+  return new Worker(workerUrl)}
+async function runInWorker(chans,sr,onProg){
+  let w=null;try{w=await makeWorker()}catch(e){w=null}
+  if(!w){ // 備援：無法建立 Worker 時直接在頁面上處理（畫面會停頓一下）
+    const r=D.process(chans,sr,profile,{onProgress:onProg});return{wav:D.encodeWav16(r.channels,sr),summary:D.summary(r.report),report:r.report}}
+  return new Promise((res,rej)=>{
+    w.onmessage=e=>{const m=e.data;if(m.progress!=null)onProg(m.progress);else{w.terminate();m.error?rej(new Error(m.error)):res(m)}};
+    w.onerror=e=>{w.terminate();rej(new Error(e.message||'背景處理失敗'))};
+    w.postMessage({chans,sr,profile},chans.map(c=>c.buffer))})}
+async function decode(file){const buf=await file.arrayBuffer();const oc=new (window.OfflineAudioContext||window.webkitOfflineAudioContext)(2,44100,44100);
+  const ab=await new Promise((res,rej)=>{const p=oc.decodeAudioData(buf,res,rej);if(p&&p.then)p.then(res,rej)});
+  const chans=[];for(let c=0;c<Math.min(2,ab.numberOfChannels);c++)chans.push(Float32Array.from(ab.getChannelData(c)));return{chans,sr:ab.sampleRate}}
+function setProg(v){const el=$('#rProg');el.hidden=v==null;if(v!=null)el.firstElementChild.style.width=Math.round(v*100)+'%'}
+$('#rFiles').addEventListener('change',e=>{rFiles=Array.from(e.target.files||[]);$('#rNames').textContent=rFiles.length?rFiles.map(f=>f.name).join('、'):'還沒選擇檔案。';
+  $('#rStart').disabled=!rFiles.length;msg('#rMsg',rFiles.length>5?`選了 ${rFiles.length} 首，手機記憶體有限，建議一次 5 首以內。`:'',rFiles.length>5)});
+onSeg('rLufs',v=>{const p=clone(profile);p.output.target_lufs=+v;setProfile(p)});
+function stem(n){return n.replace(/\.[^.]+$/,'')}
+$('#rStart').addEventListener('click',async()=>{
+  if(!rFiles.length)return;const btn=$('#rStart');btn.disabled=true;rOut.forEach(o=>URL.revokeObjectURL(o.url));rOut=[];$('#rList').innerHTML='';$('#rAudio').hidden=true;$('#rSaveRow').hidden=true;
+  thStopAll();msg('#rMsg',`用這組設定處理：${D.describeProfile(profile)}`);
+  for(let i=0;i<rFiles.length;i++){const f=rFiles[i];
+    try{setProg(i/rFiles.length);msg('#rMsg',`解碼 ${i+1}/${rFiles.length}：${f.name}`);
+      const {chans,sr}=await decode(f);
+      msg('#rMsg',`處理 ${i+1}/${rFiles.length}：${f.name}`);
+      const r=await runInWorker(chans,sr,p=>setProg((i+p)/rFiles.length));
+      const blob=new Blob([r.wav],{type:'audio/wav'});const url=URL.createObjectURL(blob);
+      const weak=r.report.ears.some(e=>e.warnings.some(w=>w.includes('能量很少')));
+      rOut.push({name:stem(f.name)+'_tinnitus.wav',blob,url,summary:r.summary});
+      const li=document.createElement('li');
+      li.innerHTML=`<span class="name">${esc(f.name)}</span>${weak?'<span class="msg err">這首在處理頻段內幾乎沒有聲音，效果有限。</span>':''}<div class="row"><button class="btn small" data-play="${rOut.length-1}">試聽</button></div><pre>${esc(r.summary)}</pre>`;
+      $('#rList').appendChild(li);
+    }catch(err){const li=document.createElement('li');li.innerHTML=`<span class="name">${esc(f.name)}</span><span class="msg err">處理失敗：${esc(err.message||err)}</span>`;$('#rList').appendChild(li)}}
+  setProg(null);btn.disabled=false;
+  msg('#rMsg',rOut.length?`完成 ${rOut.length}/${rFiles.length} 首。`:'沒有處理成功的檔案。',!rOut.length);
+  if(rOut.length){const can=canSaveAudio();$('#rSaveRow').hidden=!can;if(!can)$('#rSaveNote').textContent='這個檢視沒有存檔功能，可以先試聽。APK 版可以直接存成音檔。'}});
+$('#rShare').addEventListener('click',async()=>{if(!Native||!Native.share||!savedUris.length)return;
+  try{await Native.share.share({title:'耳鳴練習音檔',files:savedUris})}catch(err){if(!/cancel/i.test(String(err&&err.message)))msg('#rMsg','分享失敗：'+(err.message||err),true)}});
+$('#rList').addEventListener('click',e=>{const b=e.target.closest('[data-play]');if(!b)return;const o=rOut[+b.dataset.play];const a=$('#rAudio');a.hidden=false;a.src=o.url;a.play().catch(()=>{})});
+function canSaveAudio(){return !!Native||!!downloads||!IN_ARTIFACT}
+let savedUris=[];
+$('#rSave').addEventListener('click',async()=>{if(!rOut.length)return;
+  if(Native){const btn=$('#rSave');btn.disabled=true;savedUris=[];
+    try{for(let i=0;i<rOut.length;i++){msg('#rMsg',`存檔 ${i+1}/${rOut.length}：${rOut[i].name}`);setProg(0);
+        savedUris.push(await nativeSave(rOut[i].name,rOut[i].blob,p=>setProg((i+p)/rOut.length)))}
+      setProg(null);msg('#rMsg',`已存 ${savedUris.length} 個檔案到「文件 › ${SAVE_DIR}」。用檔案管理員或音樂播放器開啟即可。`);$('#rShare').hidden=!Native.share}
+    catch(err){setProg(null);msg('#rMsg','存檔失敗：'+(err.message||err),true)}
+    btn.disabled=false;return}
+  if(!downloads){rOut.forEach((o,i)=>setTimeout(()=>browserSave(o.name,o.blob),i*600));msg('#rMsg','已開始下載。');return}
+  try{const files=await Promise.all(rOut.map(async o=>({name:o.name,data:new Uint8Array(await o.blob.arrayBuffer())})));
+    const zip=D.zipStore(files);const d=new Date();
+    const name=rOut.length===1?rOut[0].name.replace(/\.wav$/,'.zip'):`tinnitus_${d.getFullYear()}${String(d.getMonth()+1).padStart(2,'0')}${String(d.getDate()).padStart(2,'0')}.zip`;
+    await downloads.save({filename:name,data:zip});msg('#rMsg','已存檔：'+name)}
+  catch(err){const code=err&&err.code;msg('#rMsg',code==='declined'?'已取消存檔。':code==='too_large'?'檔案太大，請減少一次處理的首數。':'存檔失敗：'+(err.message||code),code!=='declined')}});
+
+/* ── profile text import/export ── */
+function renderProfileText(){$('#pfText').value=JSON.stringify(profile,null,2);setSeg('rLufs',String(profile.output.target_lufs))}
+function applyProfileText(text,src){try{const p=D.parseProfile(text);setProfile(p);msg('#pfMsg',`已套用${src}：${p.name}（${D.describeProfile(p)}）`)}catch(err){msg('#pfMsg','無法套用：'+err.message,true)}}
+$('#pfApply').addEventListener('click',()=>applyProfileText($('#pfText').value,'文字框內容'));
+$('#pfReset').addEventListener('click',()=>{renderProfileText();msg('#pfMsg','')});
+$('#pfFile').addEventListener('change',async e=>{const f=e.target.files&&e.target.files[0];if(!f)return;applyProfileText(await f.text(),' '+f.name);e.target.value=''});
+$('#pfCopy').addEventListener('click',()=>{const t=$('#pfText');renderProfileText();
+  const fallback=()=>{t.focus();t.select();msg('#pfMsg','已選取全部內容，請按「複製」。')};
+  try{navigator.clipboard.writeText(t.value).then(()=>msg('#pfMsg','已複製設定檔。'),fallback)}catch(err){fallback()}});
+$('#pfSave').addEventListener('click',async()=>{const text=JSON.stringify(profile,null,2);
+  if(Native){try{await nativeSave('tinnitus_profile.json',new Blob([text],{type:'application/json'}));msg('#pfMsg',`已存到「文件 › ${SAVE_DIR} › tinnitus_profile.json」。`)}catch(err){msg('#pfMsg','存檔失敗：'+(err.message||err),true)}return}
+  if(!downloads){browserSave('tinnitus_profile.json',new Blob([text],{type:'application/json'}));return}
+  try{await downloads.save({filename:'tinnitus_profile.json',data:JSON.stringify(profile,null,2)});msg('#pfMsg','已存成 tinnitus_profile.json')}
+  catch(err){msg('#pfMsg',err&&err.code==='declined'?'已取消存檔。':'存檔失敗：'+(err.message||err.code),!(err&&err.code==='declined'))}});
+
+/* ── residual inhibition ── */
+const ri={nodes:null,tick:null,swStart:0,phase:'idle',ear:'left'};
+let riList=store.get('tw_ri',[]);if(!Array.isArray(riList))riList=[];
+function riLevel(){return +$('#riLevel').value}
+function riRender(){$('#riLvlTxt').textContent=riLevel()+' dBFS';$('#riFreq').textContent=fmtHz(profile.ears[ri.ear].center_hz);
+  const b=$('#riStart');b.textContent=ri.phase==='play'?'中止':'開始 60 秒';b.classList.toggle('on',ri.phase==='play');$('#riAsk').hidden=ri.phase!=='wait';
+  $('#riList').innerHTML=riList.slice(-8).map(r=>`<span>${r.d} · ${r.ear?EAR_ZH[r.ear]+' ':''}${fmtHz(r.f)} · ${r.s?('壓下 '+r.s+' 秒'):'無變化'}</span>`).join('')}
+function riKill(){if(ri.nodes){try{ri.nodes.src.stop()}catch(e){}try{ri.nodes.merger.disconnect()}catch(e){}ri.nodes=null}clearInterval(ri.tick);ri.tick=null}
+function riStop(){riKill();ri.phase='idle';$('#riClock').textContent='0:60';keepAwake(false);riRender()}
+function riStart(){stopAll();const c=audio();const s=c.createBufferSource();s.buffer=getWhite(c);s.loop=true;const f=profile.ears[ri.ear].center_hz;
+  const b1=c.createBiquadFilter(),b2=c.createBiquadFilter();[b1,b2].forEach(b=>{b.type='bandpass';b.Q.value=3;b.frequency.value=f});
+  const mk=c.createGain();mk.gain.value=5;const lvl=c.createGain();lvl.gain.value=0;const r=earNode(c,ri.ear==='left'?'L':'R');
+  s.connect(b1);b1.connect(b2);b2.connect(mk);mk.connect(lvl);lvl.connect(r.input);
+  const t=c.currentTime;lvl.gain.linearRampToValueAtTime(dbToGain(riLevel()),t+.5);lvl.gain.setValueAtTime(dbToGain(riLevel()),t+59.5);lvl.gain.linearRampToValueAtTime(0,t+60);s.start();s.stop(t+60.05);
+  ri.nodes={src:s,merger:r.merger,lvl};ri.phase='play';keepAwake(true);const end=Date.now()+60000;
+  ri.tick=setInterval(()=>{const left=Math.max(0,Math.ceil((end-Date.now())/1000));$('#riClock').textContent='0:'+String(left).padStart(2,'0');
+    if(left<=0){riKill();ri.phase='wait';ri.swStart=Date.now();ri.tick=setInterval(()=>{const s2=Math.floor((Date.now()-ri.swStart)/1000);$('#riClock').textContent=Math.floor(s2/60)+':'+String(s2%60).padStart(2,'0')},250);riRender()}},250);riRender()}
+function riSave(sec){const d=new Date();riList.push({d:(d.getMonth()+1)+'/'+d.getDate(),ear:ri.ear,f:profile.ears[ri.ear].center_hz,s:sec});if(riList.length>20)riList=riList.slice(-20);store.set('tw_ri',riList);riStop()}
+$('#riStart').addEventListener('click',()=>{ri.phase==='play'?riStop():riStart()});
+$('#riBack').addEventListener('click',()=>riSave(Math.round((Date.now()-ri.swStart)/1000)));
+$('#riNone').addEventListener('click',()=>riSave(0));
+onSeg('riEar',v=>{ri.ear=v;if(ri.phase!=='idle')riStop();riRender()});
+$('#riLevel').addEventListener('input',()=>{if(ri.nodes&&ctx)ri.nodes.lvl.gain.setTargetAtTime(dbToGain(riLevel()),ctx.currentTime,.05);riRender()});
+
+function stopAll(){htStop();pmStop();if(ri.phase!=='idle')riStop();thStopAll()}
+document.addEventListener('visibilitychange',()=>{if(document.visibilityState==='visible'&&ctx&&ctx.state!=='running'){try{ctx.resume()}catch(e){}}});
+
+/* ── init ── */
+store.set('tw_profile',profile);
+htRender();chart();analysis();pmRender();pmRenderAdopted();renderEars();renderProfileText();thRender();riRender();
+const h=(location.hash||'').slice(1);if(TABS.includes(h))showTab(h);
+if(Native){$('#rSave').textContent='存到手機（每首一個 WAV）';
+  $('#rSaveNote').textContent=`檔案會存在手機的「文件 › ${SAVE_DIR}」資料夾，可以用檔案管理員、音樂播放器開啟，或按「分享」傳到其他 App。輸出統一為 44.1 kHz。`;
+  $('#pfSave').hidden=false;$('#pfSave').textContent='存成 .json 檔';document.documentElement.classList.add('native')}
+else if(!IN_ARTIFACT){$('#rSave').textContent='下載 WAV';$('#rSaveNote').textContent='輸出統一為 44.1 kHz 的 WAV。';$('#pfSave').hidden=false}
+(async()=>{if(!IN_ARTIFACT)return;try{downloads=await window.claude.use('downloads')}catch(e){downloads=null}
+  $('#pfSave').hidden=!downloads;if(downloads&&rOut.length)$('#rSaveRow').hidden=false})();
+})();
+</script>

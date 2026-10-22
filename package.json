@@ -1,0 +1,21 @@
+{
+  "name": "tinnitus-lab",
+  "version": "1.0.0",
+  "private": true,
+  "description": "耳鳴頻段工作台 Android 版（Capacitor）",
+  "scripts": {
+    "prepare-www": "node scripts/prepare-www.js",
+    "sync": "node scripts/prepare-www.js && npx cap sync android",
+    "apk": "node scripts/prepare-www.js && npx cap sync android && cd android && gradlew assembleDebug"
+  },
+  "dependencies": {
+    "@capacitor-community/keep-awake": "8.0.1",
+    "@capacitor/android": "8.5.3",
+    "@capacitor/core": "8.5.3",
+    "@capacitor/filesystem": "8.1.5",
+    "@capacitor/share": "8.0.3"
+  },
+  "devDependencies": {
+    "@capacitor/cli": "8.5.3"
+  }
+}
