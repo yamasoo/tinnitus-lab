@@ -16,7 +16,24 @@ android {
             ignoreAssetsPattern = '!.svn:!.git:!.ds_store:!*.scc:.*:!CVS:!thumbs.db:!picasa.ini:!*~'
         }
     }
+    // 固定簽章：設定 TINNITUS_KEYSTORE 環境變數時（GitHub Actions 會設定），
+    // 偵錯版改用這把金鑰簽署，和你電腦本機建置的 APK 簽章相同，手機才能直接覆蓋更新。
+    // 沒有設定時維持 Android 預設的偵錯金鑰（%USERPROFILE%\.android\debug.keystore）。
+    signingConfigs {
+        debug {
+            def ks = System.getenv("TINNITUS_KEYSTORE")
+            if (ks) {
+                storeFile file(ks)
+                storePassword System.getenv("TINNITUS_KEYSTORE_PASSWORD") ?: "android"
+                keyAlias System.getenv("TINNITUS_KEY_ALIAS") ?: "androiddebugkey"
+                keyPassword System.getenv("TINNITUS_KEY_PASSWORD") ?: "android"
+            }
+        }
+    }
     buildTypes {
+        debug {
+            signingConfig signingConfigs.debug
+        }
         release {
             minifyEnabled false
             proguardFiles getDefaultProguardFile('proguard-android.txt'), 'proguard-rules.pro'

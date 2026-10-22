@@ -30,6 +30,8 @@
 
 > 如果失敗，把視窗裡的錯誤訊息複製下來就能排查。
 
+**關於 Java 版本**：建置需要 **JDK 21–24**。腳本會自動在常見位置尋找；如果你的電腦只有 Java 25 這類較新的版本（錯誤訊息會出現 `Unsupported class file major version 69`），腳本會詢問是否用 winget 自動安裝 Temurin JDK 21。用 Android Studio 開啟專案時，也請到「Settings › Build, Execution, Deployment › Build Tools › Gradle › Gradle JDK」選擇 JDK 21。
+
 ### 也可以用 Android Studio 開啟
 
 先執行一次 `build_apk.bat`（或 `npm install` 再 `npm run sync`），然後在 Android Studio 選「Open」開啟 `android` 資料夾，手機用 USB 連接並開啟「USB 偵錯」，按 ▶ 就能直接安裝到手機上。
@@ -41,6 +43,23 @@
 1. 在 GitHub 建立一個新的 repository（建議設為私人），把這個資料夾的內容推上去（`.gitignore` 已經排除了不需要的檔案）。
 2. 推到 `main` 分支後，GitHub Actions 會自動建置（設定在 `.github/workflows/build-apk.yml`）。也可以到 Actions 頁面手動按「Run workflow」。
 3. 建置完成後，在該次執行頁面最下方的 Artifacts 下載 **TinnitusLab-debug**，解壓縮就是 APK。
+
+### 第一次使用前：設定簽章金鑰
+
+Android 只允許**同一把金鑰簽署**的 APK 互相覆蓋更新。GitHub 每次建置都在新機器上，如果不設定，會用隨機的新金鑰，手機就會拒絕安裝更新。
+設定方式是把你電腦上的偵錯金鑰存成 GitHub 的 Secret（只需要做一次）：
+
+1. 在 PowerShell 執行，金鑰內容會複製到剪貼簿：
+   ```
+   [Convert]::ToBase64String([IO.File]::ReadAllBytes("$env:USERPROFILE\.android\debug.keystore")) | Set-Clipboard
+   ```
+2. 到 repo 的 **Settings › Secrets and variables › Actions › New repository secret**
+   - Name：`DEBUG_KEYSTORE_BASE64`
+   - Secret：貼上剪貼簿內容
+3. 回到 Actions 重新執行建置。
+
+這樣 GitHub 和你電腦本機建置的 APK 簽章相同，可以互相覆蓋更新，App 裡的資料也會保留。
+這把是偵錯金鑰，自己安裝使用沒問題；如果要上架 Google Play，需要另外建立正式金鑰。
 
 ---
 

@@ -34,6 +34,20 @@ jobs:
           echo "ANDROID_HOME=$SDK" >> "$GITHUB_ENV"
           echo "sdk.dir=$SDK" > android/local.properties
 
+      # 用和電腦本機相同的偵錯金鑰簽署，手機上的 App 才能直接覆蓋更新（資料會保留）
+      - name: Restore signing key
+        env:
+          KEYSTORE_B64: ${{ secrets.DEBUG_KEYSTORE_BASE64 }}
+        run: |
+          if [ -z "$KEYSTORE_B64" ]; then
+            echo "::error::沒有設定 DEBUG_KEYSTORE_BASE64。請到 repo 的 Settings › Secrets and variables › Actions 新增（見 README）。"
+            exit 1
+          fi
+          echo "$KEYSTORE_B64" | base64 -d > "$RUNNER_TEMP/debug.keystore"
+          keytool -list -keystore "$RUNNER_TEMP/debug.keystore" -storepass android -alias androiddebugkey > /dev/null \
+            || { echo "::error::金鑰無法讀取，請確認貼上的是 debug.keystore 的完整 Base64 內容。"; exit 1; }
+          echo "TINNITUS_KEYSTORE=$RUNNER_TEMP/debug.keystore" >> "$GITHUB_ENV"
+
       - name: Install packages
         run: |
           npm ci
