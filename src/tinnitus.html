@@ -117,6 +117,21 @@ audio{width:100%}
 details{background:var(--surface);border:1px solid var(--line);border-radius:10px;padding:12px 16px}
 summary{cursor:pointer;font-weight:700;min-height:32px;display:flex;align-items:center}
 details ul{margin:8px 0 4px;padding-left:1.2em;display:flex;flex-direction:column;gap:6px;font-size:.92rem}
+/* 使用須知 */
+.notice{position:fixed;inset:0;z-index:50;background:rgba(8,16,18,.62);display:flex;align-items:center;justify-content:center;
+  padding:max(16px,env(safe-area-inset-top,0px)) max(16px,env(safe-area-inset-right,0px)) max(16px,env(safe-area-inset-bottom,0px)) max(16px,env(safe-area-inset-left,0px))}
+.notice-card{background:var(--surface);color:var(--ink);border-radius:12px;max-width:560px;width:100%;max-height:100%;display:flex;flex-direction:column;box-shadow:0 12px 40px rgba(0,0,0,.35);min-height:0}
+.notice-head{padding:18px 18px 10px;border-bottom:1px solid var(--line)}
+.notice-head h2{font-size:1.25rem}
+.notice-head h2:focus{outline:none}
+.notice-head p{color:var(--err);font-weight:700;margin-top:4px}
+.notice-body{padding:14px 18px;overflow-y:auto;display:flex;flex-direction:column;gap:14px;font-size:.93rem;min-height:0}
+.notice-body h3{font-size:.95rem;margin-bottom:4px}
+.notice-body ul{margin:0;padding-left:1.2em;display:flex;flex-direction:column;gap:4px}
+.notice-body .red{background:var(--warn-bg);color:var(--warn-ink);border-radius:8px;padding:10px 12px}
+.notice-foot{padding:12px 18px 16px;border-top:1px solid var(--line);display:flex;flex-direction:column;gap:10px}
+.notice-foot .check{font-weight:500}
+.notice-link{font:inherit;font-size:.85rem;border:0;background:transparent;color:var(--accent);text-decoration:underline;cursor:pointer;padding:0;margin-top:8px}
 @media (prefers-reduced-motion: reduce){*{transition:none!important;animation:none!important}}
 </style>
 
@@ -124,8 +139,57 @@ details ul{margin:8px 0 4px;padding-left:1.2em;display:flex;flex-direction:colum
   <header>
     <h1>耳鳴頻段工作台</h1>
     <p class="sub">找出較弱的聽力頻段、配對耳鳴音調，再用左右耳各自的設定播放或處理音樂。請戴耳機使用。</p>
-    <div class="warn"><strong>開始前：</strong>把手機音量調到大約一半，整個測試過程中不要再改。任何時候聲音突然太大，先把耳機拿下來。這是自我篩檢工具，結果不能取代耳鼻喉科的聽力檢查。</div>
+    <div class="warn"><strong>開始前：</strong>把手機音量調到大約一半，整個測試過程中不要再改。任何時候聲音突然太大，先把耳機拿下來。這是自我篩檢工具，結果不能取代耳鼻喉科的聽力檢查。
+      <br><button class="notice-link" id="noticeOpen">閱讀使用須知與就醫警示</button></div>
   </header>
+
+  <div class="notice" id="notice" role="dialog" aria-modal="true" aria-labelledby="noticeTitle" hidden>
+    <div class="notice-card">
+      <div class="notice-head">
+        <h2 id="noticeTitle" tabindex="-1">使用前請先閱讀</h2>
+        <p>本工具不是醫療器材，不能診斷或治療耳鳴。</p>
+      </div>
+      <div class="notice-body">
+        <div class="red">
+          <h3>出現以下情況，請先就醫</h3>
+          <ul>
+            <li><b>突然聽力下降</b>或耳朵悶塞：可能是耳科急症，請盡快、最好在 72 小時內看耳鼻喉科。</li>
+            <li><b>只有一側</b>耳鳴，或一側聽力明顯比較差。</li>
+            <li>耳鳴<b>跟著心跳</b>一下一下（搏動性耳鳴）。</li>
+            <li>伴隨<b>眩暈</b>、走路不穩、臉部麻木或無力。</li>
+            <li>耳朵疼痛、流膿、流血，或頭部受傷後出現耳鳴。</li>
+          </ul>
+        </div>
+        <div>
+          <h3>結果只能參考</h3>
+          <ul>
+            <li>手機和耳機都沒有經過校準，聽力篩檢的數值是相對值，<b>不能取代聽力檢查</b>。篩檢看起來正常，也不代表聽力沒有問題。</li>
+            <li>耳機本身會在 8–12 kHz 附近造成假的凹陷，10 kHz 以上的結果尤其不可靠。兩耳差異大時，請先左右對調耳機再測一次。</li>
+            <li>音調配對每天可能差很多，也常常差一個八度。</li>
+          </ul>
+        </div>
+        <div>
+          <h3>效果有限</h3>
+          <ul>
+            <li>研究顯示，缺口音樂減輕耳鳴困擾的效果和一般聽音樂差不多；聲音治療整體也沒有證據優於單純衛教。請把它當成<b>聽音樂的一種方式</b>，不要期待它能治好耳鳴。</li>
+            <li>目前證據較好的是：由耳鼻喉科找出原因、有聽力損失時配戴助聽器，以及認知行為治療（CBT）。</li>
+          </ul>
+        </div>
+        <div>
+          <h3>安全音量</h3>
+          <ul>
+            <li>音量比耳鳴稍小或差不多就好，<b>不要用大音量蓋過耳鳴</b>，以免造成新的聽力傷害。</li>
+            <li>使用後耳鳴變大聲、耳朵痛、耳悶或頭暈，請立即停止。</li>
+          </ul>
+        </div>
+        <p class="note">如果耳鳴讓你非常痛苦，甚至出現傷害自己的念頭，請撥打 <b>1925 安心專線</b>（24 小時、免付費）；緊急情況請撥 <b>119</b>。</p>
+      </div>
+      <div class="notice-foot">
+        <label class="check" id="noticeAgreeRow"><input type="checkbox" id="noticeAgree">我已閱讀並了解，使用結果由自己負責</label>
+        <button class="btn primary" id="noticeOk" disabled>開始使用</button>
+      </div>
+    </div>
+  </div>
 
   <nav class="tabs" role="tablist">
     <button class="tab" role="tab" data-tab="test" aria-selected="true"><small>STEP 1</small>聽力篩檢</button>
@@ -383,6 +447,23 @@ const EAR_ZH={left:'左耳',right:'右耳'};
 const EAR_KEY={L:'left',R:'right'};
 function esc(s){return String(s).replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]))}
 function msg(id,text,err){const el=$(id);el.textContent=text||'';el.classList.toggle('err',!!err)}
+
+/* ── 使用須知（第一次開啟必須同意；版本改變時重新顯示） ── */
+const NOTICE_VERSION=1;
+const noticeEl=$('#notice');
+function noticeAccepted(){return store.get('tw_notice',0)>=NOTICE_VERSION}
+function openNotice(reopen){
+  const again=!!reopen&&noticeAccepted();
+  $('#noticeAgreeRow').hidden=again;$('#noticeAgree').checked=again;$('#noticeOk').disabled=!again;
+  $('#noticeOk').textContent=again?'關閉':'開始使用';
+  noticeEl.hidden=false;document.body.style.overflow='hidden';
+  setTimeout(()=>{try{$('#noticeTitle').focus()}catch(e){}},0)}
+function closeNotice(){noticeEl.hidden=true;document.body.style.overflow=''}
+$('#noticeAgree').addEventListener('change',e=>{$('#noticeOk').disabled=!e.target.checked});
+$('#noticeOk').addEventListener('click',()=>{if(!$('#noticeAgree').checked)return;store.set('tw_notice',NOTICE_VERSION);closeNotice()});
+$('#noticeOpen').addEventListener('click',()=>openNotice(true));
+noticeEl.addEventListener('keydown',e=>{if(e.key==='Escape'&&noticeAccepted())closeNotice()});
+if(!noticeAccepted())openNotice(false);
 
 /* ── platform: APK (Capacitor) / claude.ai artifact / plain browser ── */
 const Native=(()=>{const C=window.Capacitor;if(!C||typeof C.isNativePlatform!=='function'||!C.isNativePlatform())return null;
