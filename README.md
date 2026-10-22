@@ -173,7 +173,7 @@ scripts/prepare-www.js   產生 www/index.html
 android/                 Android 原生專案（Capacitor 產生）
 build_apk.bat            Windows 一鍵建置
 .github/workflows/       GitHub 自動建置
-capacitor.config.json    App 名稱與 ID（com.mayasoo.tinnituslab）
+capacitor.config.json    App 名稱與 ID（com.ear.tinnituslab）
 ```
 
 ---

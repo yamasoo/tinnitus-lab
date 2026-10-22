@@ -476,10 +476,16 @@ async function nativeSave(name,blob,onProg){
   try{if(Native.fs.checkPermissions){const st=await Native.fs.checkPermissions();
     if(st.publicStorage!=='granted'){const r=await Native.fs.requestPermissions();if(r.publicStorage!=='granted')throw new Error('沒有儲存權限，請到系統設定允許「檔案」權限後再試一次。')}}}
   catch(e){if(/權限/.test(e.message))throw e}
-  const path=SAVE_DIR+'/'+name,CH=3*1024*1024; // 3 的倍數，base64 分段才能直接接起來
+  let path=SAVE_DIR+'/'+name;const CH=3*1024*1024; // 3 的倍數，base64 分段才能直接接起來
   for(let off=0,first=true;off<blob.size||first;off+=CH,first=false){
     const data=await blobToBase64(blob.slice(off,off+CH));
-    if(first)await Native.fs.writeFile({path,data,directory:'DOCUMENTS',recursive:true});
+    if(first){
+      try{await Native.fs.writeFile({path,data,directory:'DOCUMENTS',recursive:true})}
+      catch(e){ // 同名檔案屬於其他 App（例如舊版）或無法覆寫時，改用加上時間的新檔名
+        const d=new Date(),p2=n=>String(n).padStart(2,'0');
+        const stamp=`${d.getFullYear()}${p2(d.getMonth()+1)}${p2(d.getDate())}-${p2(d.getHours())}${p2(d.getMinutes())}${p2(d.getSeconds())}`;
+        path=SAVE_DIR+'/'+name.replace(/(\.[^.]+)?$/,m=>'_'+stamp+m);
+        await Native.fs.writeFile({path,data,directory:'DOCUMENTS',recursive:true})}}
     else await Native.fs.appendFile({path,data,directory:'DOCUMENTS'});
     if(onProg)onProg(Math.min(1,(off+CH)/Math.max(1,blob.size)));
   }

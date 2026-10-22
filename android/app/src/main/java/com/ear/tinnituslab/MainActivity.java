@@ -1,4 +1,4 @@
-package com.mayasoo.tinnituslab;
+package com.ear.tinnituslab;
 
 import com.getcapacitor.BridgeActivity;
 
